@@ -1,0 +1,6 @@
+# Arquivos de Agentes e Dependências (Supabase agent-skills)
+node_modules/
+.agents/
+package.json
+package-lock.json
+skills-lock.json

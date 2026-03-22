@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'login_page.dart';
 
 import '../theme/app_theme.dart';
 
@@ -107,6 +110,13 @@ class _FixedHeader extends StatelessWidget {
   final double height;
   final double scale;
 
+  Future<void> _logout(BuildContext context) async {
+    await Supabase.instance.client.auth.signOut();
+    if (context.mounted) {
+      Navigator.of(context).pushReplacementNamed(LoginPage.routeName);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -115,17 +125,20 @@ class _FixedHeader extends StatelessWidget {
       padding: EdgeInsets.symmetric(horizontal: 12 * scale),
       child: Row(
         children: [
-          Container(
-            width: 30 * scale,
-            height: 30 * scale,
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(8 * scale),
-            ),
-            child: Icon(
-              Icons.person,
-              color: Colors.white,
-              size: 18 * scale,
+          GestureDetector(
+            onTap: () => _logout(context),
+            child: Container(
+              width: 30 * scale,
+              height: 30 * scale,
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(8 * scale),
+              ),
+              child: Icon(
+                Icons.logout,
+                color: Colors.white,
+                size: 18 * scale,
+              ),
             ),
           ),
           const Spacer(),

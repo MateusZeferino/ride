@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../theme/app_theme.dart';
+import 'home_page.dart';
 import 'onboarding_1_page.dart';
 
 class SplashPage extends StatefulWidget {
@@ -22,7 +24,13 @@ class _SplashPageState extends State<SplashPage> {
   Future<void> _prepareApp() async {
     await Future<void>.delayed(const Duration(seconds: 2));
     if (!mounted) return;
-    Navigator.of(context).pushReplacementNamed(Onboarding1Page.routeName);
+
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session != null) {
+      Navigator.of(context).pushReplacementNamed(HomePage.routeName);
+    } else {
+      Navigator.of(context).pushReplacementNamed(Onboarding1Page.routeName);
+    }
   }
 
   @override

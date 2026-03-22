@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../theme/app_theme.dart';
 import 'home_page.dart';
@@ -15,9 +16,60 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _isLoading = false;
+
   bool rememberMe = false;
   bool stayConnected = false;
   bool obscurePassword = true;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _login() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Por favor, preencha todos os campos.')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      await Supabase.instance.client.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+      if (mounted) {
+        Navigator.of(context).pushReplacementNamed(HomePage.routeName);
+      }
+    } on AuthException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Erro inesperado ocorreu.')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,13 +89,16 @@ class _LoginPageState extends State<LoginPage> {
                       const SizedBox(height: 76),
                       Text('TRAVELLY', style: textTheme.headlineMedium),
                       const SizedBox(height: 64),
-                      const TextField(
-                        decoration: InputDecoration(
-                          hintText: 'Nome de usuario ou email',
+                      TextField(
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        decoration: const InputDecoration(
+                          hintText: 'Email',
                         ),
                       ),
                       const SizedBox(height: 14),
                       TextField(
+                        controller: _passwordController,
                         obscureText: obscurePassword,
                         decoration: InputDecoration(
                           hintText: 'Senha',
@@ -116,11 +171,8 @@ class _LoginPageState extends State<LoginPage> {
                       const SizedBox(height: 14),
                       _PrimaryButton(
                         text: 'LOGIN',
-                        onPressed: () {
-                          Navigator.of(context).pushReplacementNamed(
-                            HomePage.routeName,
-                          );
-                        },
+                        isLoading: _isLoading,
+                        onPressed: _isLoading ? () {} : _login,
                       ),
                       const SizedBox(height: 42),
                       Text(
@@ -179,10 +231,11 @@ class _TinyCheck extends StatelessWidget {
 }
 
 class _PrimaryButton extends StatelessWidget {
-  const _PrimaryButton({required this.text, required this.onPressed});
+  const _PrimaryButton({required this.text, required this.onPressed, this.isLoading = false});
 
   final String text;
   final VoidCallback onPressed;
+  final bool isLoading;
 
   @override
   Widget build(BuildContext context) {
@@ -197,14 +250,16 @@ class _PrimaryButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
           ),
         ),
-        child: Text(
-          text,
-          style: GoogleFonts.bebasNeue(
-            color: Colors.white,
-            fontSize: 43 / 2,
-            letterSpacing: 0.8,
-          ),
-        ),
+        child: isLoading 
+            ? const CircularProgressIndicator(color: Colors.white)
+            : Text(
+                text,
+                style: GoogleFonts.bebasNeue(
+                  color: Colors.white,
+                  fontSize: 43 / 2,
+                  letterSpacing: 0.8,
+                ),
+              ),
       ),
     );
   }
