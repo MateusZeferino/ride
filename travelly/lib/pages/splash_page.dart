@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
-import 'login_page.dart';
+import 'onboarding_1_page.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -22,7 +22,7 @@ class _SplashPageState extends State<SplashPage> {
   Future<void> _prepareApp() async {
     await Future<void>.delayed(const Duration(seconds: 2));
     if (!mounted) return;
-    Navigator.of(context).pushReplacementNamed(LoginPage.routeName);
+    Navigator.of(context).pushReplacementNamed(Onboarding1Page.routeName);
   }
 
   @override

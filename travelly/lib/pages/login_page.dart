@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../theme/app_theme.dart';
+import 'home_page.dart';
 import 'signup_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -113,7 +114,14 @@ class _LoginPageState extends State<LoginPage> {
                         ],
                       ),
                       const SizedBox(height: 14),
-                      _PrimaryButton(text: 'LOGIN', onPressed: () {}),
+                      _PrimaryButton(
+                        text: 'LOGIN',
+                        onPressed: () {
+                          Navigator.of(context).pushReplacementNamed(
+                            HomePage.routeName,
+                          );
+                        },
+                      ),
                       const SizedBox(height: 42),
                       Text(
                         'Nao possui conta ainda?',

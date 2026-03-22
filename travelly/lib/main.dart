@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 
+import 'pages/home_page.dart';
 import 'pages/login_page.dart';
+import 'pages/onboarding_1_page.dart';
+import 'pages/onboarding_2_page.dart';
+import 'pages/onboarding_3_page.dart';
 import 'pages/signup_page.dart';
 import 'pages/splash_page.dart';
 import 'theme/app_theme.dart';
@@ -21,8 +25,12 @@ class TravellyApp extends StatelessWidget {
       initialRoute: SplashPage.routeName,
       routes: {
         SplashPage.routeName: (context) => const SplashPage(),
+        Onboarding1Page.routeName: (context) => const Onboarding1Page(),
+        Onboarding2Page.routeName: (context) => const Onboarding2Page(),
+        Onboarding3Page.routeName: (context) => const Onboarding3Page(),
         LoginPage.routeName: (context) => const LoginPage(),
         SignupPage.routeName: (context) => const SignupPage(),
+        HomePage.routeName: (context) => const HomePage(),
       },
     );
   }
