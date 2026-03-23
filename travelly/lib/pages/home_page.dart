@@ -1,114 +1,31 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'login_page.dart';
-
 import '../theme/app_theme.dart';
+import 'login_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   static const routeName = '/home';
 
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const originalWidth = 560.0;
-        const topCropPx = 96.0;
-        const bottomCropPx = 158.0;
+  String _resolveDisplayName(User? user) {
+    final metadata = user?.userMetadata;
+    final username = metadata?['username']?.toString().trim();
+    if (username != null && username.isNotEmpty) return username;
 
-        final scale = constraints.maxWidth / originalWidth;
-        final headerHeight = topCropPx * scale;
-        final bottomBarHeight = bottomCropPx * scale;
+    final fullName = metadata?['full_name']?.toString().trim();
+    if (fullName != null && fullName.isNotEmpty) return fullName;
 
-        return Scaffold(
-          backgroundColor: AppColors.background,
-          body: Stack(
-            children: [
-              Positioned.fill(
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    top: headerHeight,
-                    bottom: bottomBarHeight,
-                  ),
-                  child: SingleChildScrollView(
-                    child: _HomeReferenceBody(
-                      topCropPx: topCropPx,
-                      bottomCropPx: bottomCropPx,
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: _FixedHeader(height: headerHeight, scale: scale),
-              ),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: _FixedBottomBar(height: bottomBarHeight, scale: scale),
-              ),
-            ],
-          ),
-        );
-      },
-    );
+    final email = user?.email?.trim();
+    if (email != null && email.contains('@')) {
+      return email.split('@').first;
+    }
+
+    return 'Viajante';
   }
-}
-
-class _HomeReferenceBody extends StatelessWidget {
-  const _HomeReferenceBody({
-    required this.topCropPx,
-    required this.bottomCropPx,
-  });
-
-  final double topCropPx;
-  final double bottomCropPx;
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const originalWidth = 560.0;
-        const originalHeight = 1948.0;
-
-        final width = constraints.maxWidth;
-        final scale = width / originalWidth;
-        final topCrop = topCropPx * scale;
-        final bottomCrop = bottomCropPx * scale;
-        final scaledHeight = originalHeight * scale;
-        final contentHeight = scaledHeight - topCrop - bottomCrop;
-
-        return SizedBox(
-          height: contentHeight,
-          width: width,
-          child: ClipRect(
-            child: Transform.translate(
-              offset: Offset(0, -topCrop),
-              child: Image.asset(
-                'pages/Tela inicial.png',
-                width: width,
-                fit: BoxFit.fitWidth,
-                alignment: Alignment.topCenter,
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _FixedHeader extends StatelessWidget {
-  const _FixedHeader({required this.height, required this.scale});
-
-  final double height;
-  final double scale;
 
   Future<void> _logout(BuildContext context) async {
     await Supabase.instance.client.auth.signOut();
@@ -119,42 +36,132 @@ class _FixedHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final user = Supabase.instance.client.auth.currentUser;
+    final displayName = _resolveDisplayName(user);
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(14, 8, 14, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _TopBar(onLogout: () => _logout(context)),
+              const SizedBox(height: 12),
+              Text(
+                'Bom dia, $displayName!',
+                style: GoogleFonts.bebasNeue(
+                  color: AppColors.primary,
+                  fontSize: 46,
+                  height: 0.95,
+                  letterSpacing: 0.6,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Veja o que está te esperando na estrada',
+                style: GoogleFonts.oswald(
+                  color: AppColors.textMuted,
+                  fontSize: 15,
+                ),
+              ),
+              const SizedBox(height: 12),
+              const _SearchBar(),
+              const SizedBox(height: 12),
+              const _PlannerCard(),
+              const SizedBox(height: 18),
+              const _SectionHeader(title: 'PROXIMAS VIAGENS'),
+              const SizedBox(height: 2),
+              Text(
+                'Clique em uma viagem em aberto para conferir o roteiro',
+                style: GoogleFonts.oswald(
+                  color: AppColors.textMuted,
+                  fontSize: 10,
+                ),
+              ),
+              const SizedBox(height: 10),
+              const _TripsHorizontalList(),
+              const SizedBox(height: 22),
+              const _SectionHeader(title: 'SUGESTOES PRA VOCE'),
+              const SizedBox(height: 2),
+              Text(
+                'Encontre lugares e destinos que sao a sua cara',
+                style: GoogleFonts.oswald(
+                  color: AppColors.textMuted,
+                  fontSize: 10,
+                ),
+              ),
+              const SizedBox(height: 10),
+              const _SuggestionCard(),
+            ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: const _BottomNavBar(),
+    );
+  }
+}
+
+class _TopBar extends StatelessWidget {
+  const _TopBar({required this.onLogout});
+
+  final VoidCallback onLogout;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 26,
+          height: 26,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(6),
+            image: const DecorationImage(
+              image: AssetImage('assets/images/Foto perfil.jpg'),
+              fit: BoxFit.cover,
+            ),
+          ),
+        ),
+        const Spacer(),
+        Text(
+          'HOME',
+          style: GoogleFonts.bebasNeue(
+            color: AppColors.primary,
+            fontSize: 34,
+            letterSpacing: 0.6,
+          ),
+        ),
+        const Spacer(),
+        const Icon(Icons.notifications, size: 18, color: AppColors.primary),
+      ],
+    );
+  }
+}
+
+class _SearchBar extends StatelessWidget {
+  const _SearchBar();
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      height: height,
-      color: AppColors.background,
-      padding: EdgeInsets.symmetric(horizontal: 12 * scale),
+      height: 40,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFD2D9E0),
+        borderRadius: BorderRadius.circular(8),
+      ),
       child: Row(
         children: [
-          GestureDetector(
-            onTap: () => _logout(context),
-            child: Container(
-              width: 30 * scale,
-              height: 30 * scale,
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(8 * scale),
-              ),
-              child: Icon(
-                Icons.logout,
-                color: Colors.white,
-                size: 18 * scale,
-              ),
-            ),
-          ),
-          const Spacer(),
+          const Icon(Icons.search, color: AppColors.textMuted, size: 18),
+          const SizedBox(width: 8),
           Text(
-            'HOME',
-            style: GoogleFonts.bebasNeue(
+            'Pesquise lugares ou pessoas!',
+            style: GoogleFonts.oswald(
               color: AppColors.primary,
-              fontSize: 34 * scale,
-              letterSpacing: 0.6 * scale,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
             ),
-          ),
-          const Spacer(),
-          Icon(
-            Icons.notifications,
-            color: AppColors.primary,
-            size: 20 * scale,
           ),
         ],
       ),
@@ -162,84 +169,476 @@ class _FixedHeader extends StatelessWidget {
   }
 }
 
-class _FixedBottomBar extends StatelessWidget {
-  const _FixedBottomBar({required this.height, required this.scale});
-
-  final double height;
-  final double scale;
+class _PlannerCard extends StatelessWidget {
+  const _PlannerCard();
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: height,
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFF8CA1B7), width: 1),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'PENSE, PLANEJE, EXECUTE',
+                  style: GoogleFonts.bebasNeue(
+                    color: AppColors.primary,
+                    fontSize: 17,
+                    letterSpacing: 0.4,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Crie um roteiro com origem, destino,\ntipo de rota e paradas no caminho',
+                  style: GoogleFonts.oswald(
+                    color: AppColors.textMuted,
+                    fontSize: 10,
+                    height: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'PLANEJAR SUA PROXIMA VIAGEM',
+                    style: GoogleFonts.bebasNeue(
+                      color: Colors.white,
+                      fontSize: 9,
+                      letterSpacing: 0.6,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              Container(
+                width: 84,
+                height: 84,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [Color(0xFFEAF0FF), Color(0xFFD6E6FF)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+              ),
+              const Icon(Icons.two_wheeler, size: 52, color: Color(0xFF5D6CD6)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title});
+
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text(
+          title,
+          style: GoogleFonts.bebasNeue(
+            color: AppColors.primary,
+            fontSize: 22,
+            letterSpacing: 0.4,
+          ),
+        ),
+        const Spacer(),
+        Text(
+          'ver tudo',
+          style: GoogleFonts.oswald(color: AppColors.textMuted, fontSize: 10),
+        ),
+      ],
+    );
+  }
+}
+
+class _TripsHorizontalList extends StatelessWidget {
+  const _TripsHorizontalList();
+
+  static const _trips = [
+    _TripData(
+      imagePath: 'assets/images/jpg.jpg',
+      city: 'GRAMADO, SC',
+      stops: '3 PARADAS',
+      date: '30 DEZ | 02 JAN',
+      startsAt: '8h',
+      endsAt: '20h',
+    ),
+    _TripData(
+      imagePath: 'assets/images/Salvador city Bahia, Brasil, aerial view_.jpg',
+      city: 'FLORIANOPOLIS, SC',
+      stops: '5 PARADAS',
+      date: '01 MAR | 08 ABR',
+      startsAt: '4h',
+      endsAt: '23h',
+    ),
+    _TripData(
+      imagePath: 'assets/images/aborgue.jpg',
+      city: 'SALVADOR, BA',
+      stops: '4 PARADAS',
+      date: '12 JUL | 20 JUL',
+      startsAt: '6h',
+      endsAt: '19h',
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 186,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: _trips.length,
+        separatorBuilder: (_, index) => const SizedBox(width: 10),
+        itemBuilder: (context, index) {
+          return _TripCard(data: _trips[index]);
+        },
+      ),
+    );
+  }
+}
+
+class _TripData {
+  const _TripData({
+    required this.imagePath,
+    required this.city,
+    required this.stops,
+    required this.date,
+    required this.startsAt,
+    required this.endsAt,
+  });
+
+  final String imagePath;
+  final String city;
+  final String stops;
+  final String date;
+  final String startsAt;
+  final String endsAt;
+}
+
+class _TripCard extends StatelessWidget {
+  const _TripCard({required this.data});
+
+  final _TripData data;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 168,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(6),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x22000000),
+              blurRadius: 4,
+              offset: Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(6),
+              ),
+              child: SizedBox(
+                height: 88,
+                width: double.infinity,
+                child: Image.asset(data.imagePath, fit: BoxFit.cover),
+              ),
+            ),
+            Container(
+              color: AppColors.primary,
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      data.city,
+                      style: GoogleFonts.bebasNeue(
+                        color: Colors.white,
+                        fontSize: 13,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    data.stops,
+                    style: GoogleFonts.bebasNeue(
+                      color: Colors.white,
+                      fontSize: 13,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 6, 8, 0),
+              child: Text(
+                data.date,
+                style: GoogleFonts.oswald(
+                  color: AppColors.textMuted,
+                  fontSize: 9,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 1, 8, 0),
+              child: Row(
+                children: [
+                  Text(
+                    data.startsAt,
+                    style: GoogleFonts.oswald(
+                      color: AppColors.primary,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  Text(
+                    ' - ',
+                    style: GoogleFonts.oswald(
+                      color: AppColors.textMuted,
+                      fontSize: 9,
+                    ),
+                  ),
+                  Text(
+                    data.endsAt,
+                    style: GoogleFonts.oswald(
+                      color: AppColors.primary,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SuggestionCard extends StatelessWidget {
+  const _SuggestionCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x18000000),
+            blurRadius: 4,
+            offset: Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+            child: SizedBox(
+              height: 240,
+              width: double.infinity,
+              child: Image.asset(
+                'assets/images/italiano.jpg',
+                fit: BoxFit.cover,
+              ),
+            ),
+          ),
+          Container(
+            width: double.infinity,
+            color: AppColors.primary,
+            padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Divina Italia',
+                        style: GoogleFonts.oswald(
+                          color: Colors.white,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    SvgPicture.asset(
+                      'figma/star.svg',
+                      width: 14,
+                      height: 14,
+                      colorFilter: const ColorFilter.mode(
+                        Color(0xFFFEDB41),
+                        BlendMode.srcIn,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '4.8',
+                      style: GoogleFonts.oswald(
+                        color: Colors.white,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    Text(
+                      'Restaurante',
+                      style: GoogleFonts.oswald(
+                        color: const Color(0xFFD5DFE9),
+                        fontSize: 10,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      'Ver detalhes',
+                      style: GoogleFonts.oswald(
+                        color: const Color(0xFFD5DFE9),
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  'Ararangua, SC',
+                  style: GoogleFonts.oswald(
+                    color: Colors.white,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BottomNavBar extends StatelessWidget {
+  const _BottomNavBar();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 74,
       decoration: const BoxDecoration(
         color: AppColors.background,
-        border: Border(
-          top: BorderSide(color: Color(0xFFC7CED6), width: 1),
-        ),
+        border: Border(top: BorderSide(color: Color(0xFFBAC6D3), width: 1)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _NavItem(icon: Icons.home, label: 'Inicio', active: true, scale: scale),
-          _NavItem(icon: Icons.person_outline, label: 'Perfil', scale: scale),
-          _CenterNavButton(scale: scale),
-          _NavItem(icon: Icons.travel_explore, label: 'Viagem', scale: scale),
-          _NavItem(icon: Icons.group_outlined, label: 'Amigos', scale: scale),
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: const [
+          _NavItem(
+            iconPath: 'figma/house-blank.svg',
+            label: 'Inicio',
+            active: true,
+          ),
+          _NavItem(iconPath: 'figma/user.svg', label: 'Perfil'),
+          _CenterMenuButton(),
+          _NavItem(iconPath: 'figma/map-marker.svg', label: 'Viagem'),
+          _NavItem(iconPath: 'figma/users.svg', label: 'Amigos'),
         ],
       ),
     );
   }
 }
 
-class _CenterNavButton extends StatelessWidget {
-  const _CenterNavButton({required this.scale});
-
-  final double scale;
+class _CenterMenuButton extends StatelessWidget {
+  const _CenterMenuButton();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 58 * scale,
-      height: 58 * scale,
-      decoration: const BoxDecoration(
-        color: AppColors.primary,
-        shape: BoxShape.circle,
+    return Transform.translate(
+      offset: const Offset(0, -12),
+      child: Container(
+        width: 56,
+        height: 56,
+        decoration: const BoxDecoration(
+          color: AppColors.primary,
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(Icons.menu, color: Colors.white, size: 32),
       ),
-      child: Icon(Icons.menu, color: Colors.white, size: 30 * scale),
     );
   }
 }
 
 class _NavItem extends StatelessWidget {
   const _NavItem({
-    required this.icon,
+    required this.iconPath,
     required this.label,
-    required this.scale,
     this.active = false,
   });
 
-  final IconData icon;
+  final String iconPath;
   final String label;
-  final double scale;
   final bool active;
 
   @override
   Widget build(BuildContext context) {
-    final color = active ? const Color(0xFF1E8FFF) : AppColors.primary;
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(icon, size: 18 * scale, color: color),
-        SizedBox(height: 4 * scale),
-        Text(
-          label,
-          style: GoogleFonts.oswald(
-            color: AppColors.primary,
-            fontSize: 12 * scale,
+    final iconColor = active ? const Color(0xFF1E8FFF) : AppColors.primary;
+
+    return SizedBox(
+      width: 56,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SvgPicture.asset(
+            iconPath,
+            width: 16,
+            height: 16,
+            colorFilter: ColorFilter.mode(iconColor, BlendMode.srcIn),
           ),
-        ),
-      ],
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: GoogleFonts.oswald(color: AppColors.primary, fontSize: 9),
+          ),
+        ],
+      ),
     );
   }
 }
