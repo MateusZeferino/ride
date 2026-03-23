@@ -4,12 +4,25 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../theme/app_theme.dart';
-import 'login_page.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
   static const routeName = '/home';
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  final TextEditingController _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   String _resolveDisplayName(User? user) {
     final metadata = user?.userMetadata;
@@ -27,17 +40,21 @@ class HomePage extends StatelessWidget {
     return 'Viajante';
   }
 
-  Future<void> _logout(BuildContext context) async {
-    await Supabase.instance.client.auth.signOut();
-    if (context.mounted) {
-      Navigator.of(context).pushReplacementNamed(LoginPage.routeName);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final user = Supabase.instance.client.auth.currentUser;
     final displayName = _resolveDisplayName(user);
+
+    final trips = _TripsHorizontalList.allTrips.where((trip) {
+      if (_query.isEmpty) return true;
+      final query = _query.toLowerCase();
+      return trip.city.toLowerCase().contains(query) ||
+          trip.stops.toLowerCase().contains(query);
+    }).toList();
+
+    final suggestionVisible =
+        _query.isEmpty ||
+        'divina italia ararangua restaurante'.contains(_query.toLowerCase());
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -47,7 +64,7 @@ class HomePage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _TopBar(onLogout: () => _logout(context)),
+              const _TopBar(),
               const SizedBox(height: 12),
               Text(
                 'Bom dia, $displayName!',
@@ -67,7 +84,10 @@ class HomePage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              const _SearchBar(),
+              _SearchBar(
+                controller: _searchController,
+                onChanged: (value) => setState(() => _query = value.trim()),
+              ),
               const SizedBox(height: 12),
               const _PlannerCard(),
               const SizedBox(height: 18),
@@ -81,7 +101,7 @@ class HomePage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 10),
-              const _TripsHorizontalList(),
+              _TripsHorizontalList(trips: trips),
               const SizedBox(height: 22),
               const _SectionHeader(title: 'SUGESTOES PRA VOCE'),
               const SizedBox(height: 2),
@@ -93,7 +113,7 @@ class HomePage extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 10),
-              const _SuggestionCard(),
+              _SuggestionCard(visible: suggestionVisible),
             ],
           ),
         ),
@@ -104,9 +124,7 @@ class HomePage extends StatelessWidget {
 }
 
 class _TopBar extends StatelessWidget {
-  const _TopBar({required this.onLogout});
-
-  final VoidCallback onLogout;
+  const _TopBar();
 
   @override
   Widget build(BuildContext context) {
@@ -140,30 +158,70 @@ class _TopBar extends StatelessWidget {
 }
 
 class _SearchBar extends StatelessWidget {
-  const _SearchBar();
+  const _SearchBar({required this.controller, required this.onChanged});
+
+  final TextEditingController controller;
+  final ValueChanged<String> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       height: 40,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFD2D9E0),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.search, color: AppColors.textMuted, size: 18),
-          const SizedBox(width: 8),
-          Text(
-            'Pesquise lugares ou pessoas!',
-            style: GoogleFonts.oswald(
-              color: AppColors.primary,
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-            ),
+      child: TextField(
+        controller: controller,
+        onChanged: onChanged,
+        style: GoogleFonts.oswald(
+          color: AppColors.primary,
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+        ),
+        decoration: InputDecoration(
+          hintText: 'Pesquise lugares ou pessoas',
+          hintStyle: GoogleFonts.oswald(
+            color: AppColors.primary.withValues(alpha: 0.8),
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
           ),
-        ],
+          prefixIcon: const Icon(
+            Icons.search,
+            color: AppColors.textMuted,
+            size: 18,
+          ),
+          prefixIconConstraints: const BoxConstraints(
+            minWidth: 38,
+            minHeight: 40,
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 10,
+            vertical: 10,
+          ),
+          filled: true,
+          fillColor: const Color(0xFFD2D9E0),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide.none,
+          ),
+          disabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide.none,
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide.none,
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide.none,
+          ),
+        ),
       ),
     );
   }
@@ -175,7 +233,7 @@ class _PlannerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+      padding: const EdgeInsets.fromLTRB(14, 14, 12, 12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: const Color(0xFF8CA1B7), width: 1),
@@ -190,7 +248,7 @@ class _PlannerCard extends StatelessWidget {
                   'PENSE, PLANEJE, EXECUTE',
                   style: GoogleFonts.bebasNeue(
                     color: AppColors.primary,
-                    fontSize: 17,
+                    fontSize: 20,
                     letterSpacing: 0.4,
                   ),
                 ),
@@ -199,7 +257,7 @@ class _PlannerCard extends StatelessWidget {
                   'Crie um roteiro com origem, destino,\ntipo de rota e paradas no caminho',
                   style: GoogleFonts.oswald(
                     color: AppColors.textMuted,
-                    fontSize: 10,
+                    fontSize: 11,
                     height: 1.2,
                   ),
                 ),
@@ -217,7 +275,7 @@ class _PlannerCard extends StatelessWidget {
                     'PLANEJAR SUA PROXIMA VIAGEM',
                     style: GoogleFonts.bebasNeue(
                       color: Colors.white,
-                      fontSize: 9,
+                      fontSize: 10.5,
                       letterSpacing: 0.6,
                     ),
                   ),
@@ -225,24 +283,17 @@ class _PlannerCard extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              Container(
-                width: 84,
-                height: 84,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [Color(0xFFEAF0FF), Color(0xFFD6E6FF)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
+          const SizedBox(width: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: SizedBox(
+              width: 105,
+              height: 98,
+              child: Image.asset(
+                'assets/images/Foto - card principal.png',
+                fit: BoxFit.cover,
               ),
-              const Icon(Icons.two_wheeler, size: 52, color: Color(0xFF5D6CD6)),
-            ],
+            ),
           ),
         ],
       ),
@@ -278,9 +329,9 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _TripsHorizontalList extends StatelessWidget {
-  const _TripsHorizontalList();
+  const _TripsHorizontalList({required this.trips});
 
-  static const _trips = [
+  static const allTrips = [
     _TripData(
       imagePath: 'assets/images/jpg.jpg',
       city: 'GRAMADO, SC',
@@ -307,16 +358,30 @@ class _TripsHorizontalList extends StatelessWidget {
     ),
   ];
 
+  final List<_TripData> trips;
+
   @override
   Widget build(BuildContext context) {
+    if (trips.isEmpty) {
+      return SizedBox(
+        height: 120,
+        child: Center(
+          child: Text(
+            'Nenhuma viagem encontrada.',
+            style: GoogleFonts.oswald(color: AppColors.textMuted, fontSize: 13),
+          ),
+        ),
+      );
+    }
+
     return SizedBox(
       height: 186,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        itemCount: _trips.length,
+        itemCount: trips.length,
         separatorBuilder: (_, index) => const SizedBox(width: 10),
         itemBuilder: (context, index) {
-          return _TripCard(data: _trips[index]);
+          return _TripCard(data: trips[index]);
         },
       ),
     );
@@ -450,10 +515,22 @@ class _TripCard extends StatelessWidget {
 }
 
 class _SuggestionCard extends StatelessWidget {
-  const _SuggestionCard();
+  const _SuggestionCard({required this.visible});
+
+  final bool visible;
 
   @override
   Widget build(BuildContext context) {
+    if (!visible) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 18),
+        child: Text(
+          'Nenhuma sugestao encontrada.',
+          style: GoogleFonts.oswald(color: AppColors.textMuted, fontSize: 13),
+        ),
+      );
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
